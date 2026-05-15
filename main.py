@@ -1,8 +1,11 @@
 import os
 from dotenv import load_dotenv
 
+import tempfile
+
 from llama_index.core import VectorStoreIndex, Settings
 
+from llama_index.core import SimpleDirectoryReader
 from llama_index.llms.openai import OpenAI
 from llama_index.vector_stores.pinecone import PineconeVectorStore
 from pinecone import Pinecone
@@ -15,6 +18,8 @@ from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.core.postprocessor import SentenceEmbeddingOptimizer
 from llama_index.core.postprocessor.types import BaseNodePostprocessor
 from llama_index.core.schema import NodeWithScore, QueryBundle
+from llama_index.core.node_parser import SentenceSplitter
+from llama_index.core.ingestion import IngestionPipeline
 
 
 load_dotenv()
@@ -45,6 +50,42 @@ def get_index():
     index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
     
     return index
+
+
+def process_and_upload_file(uploaded_file, vector_store):
+    """Procesa el archivo subido por el usuario y lo indexa a Pinecone"""
+    with tempfile.NamedTemporaryFile(delete=False, suffix=f".{uploaded_file.name.split('.')[-1]}") as tmp_file:
+        tmp_file.write(uploaded_file.getvalue())
+        tmp_path = tmp_file.name
+        
+    try:
+        documents = SimpleDirectoryReader(
+            input_files=[tmp_path]
+        ).load_data()
+        
+        pipeline = IngestionPipeline(
+            transformations = get_transformation(),
+            vector_store = vector_store,
+        
+        )
+        
+        processed_node = pipeline.run(documents=documents, show_progress=True, num_workers=4)
+        
+        print(f'\n Pipeline completed')
+        print(f'    Nodes returned: {len(processed_node)}')
+    finally:
+        os.remove(tmp_path)
+        
+
+def get_transformation():
+    return [
+        SentenceSplitter(
+            chunk_size=Settings.chunk_size,
+            chunk_overlap=Settings.chunk_overlap
+        ),
+        Settings.embed_model
+    ]
+    
 
 
 def main():
