@@ -15,6 +15,7 @@ from llama_index.core.memory import ChatMemoryBuffer
 from llama_index.llms.groq import Groq
 from llama_index.core.chat_engine.types import ChatMode
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+# from llama_index.embeddings.huggingface import SentenceTransformerEmbedding
 from llama_index.core.postprocessor import SentenceEmbeddingOptimizer
 from llama_index.core.postprocessor.types import BaseNodePostprocessor
 from llama_index.core.schema import NodeWithScore, QueryBundle
@@ -34,7 +35,9 @@ llm = Groq(
 )
 
 Settings.llm = llm
-Settings.embed_model = HuggingFaceEmbedding(model_name="mixedbread-ai/mxbai-embed-large-v1")
+Settings.embed_model = HuggingFaceEmbedding(
+    model_name="mixedbread-ai/mxbai-embed-large-v1"
+)
 Settings.chunk_size = 512
 Settings.chunk_overlap = 50
 
@@ -72,7 +75,7 @@ def process_and_upload_file(file_path, vector_store):
         
         )
         
-        processed_node = pipeline.run(documents=documents, show_progress=True, num_workers=4)
+        processed_node = pipeline.run(documents=documents, show_progress=True, num_workers=1)
         
         print(f'\n Pipeline completed')
         print(f'    Nodes returned: {len(processed_node)}')
@@ -95,13 +98,13 @@ def get_transformation():
 def main():
    
    
-   sentence_optimizer = SentenceEmbeddingOptimizer(
-       embed_model=Settings.embed_model,
-       percentile_cutoff=0.5,
-       threshold_cutoff=0.7,
-       context_before=1,
-       context_after=1,
-   )
+#    sentence_optimizer = SentenceEmbeddingOptimizer(
+#        embed_model=Settings.embed_model,
+#        percentile_cutoff=0.5,
+#        threshold_cutoff=0.7,
+#        context_before=1,
+#        context_after=1,
+#    )
    
    index = get_index()
    
@@ -111,11 +114,9 @@ def main():
    
    process_and_upload_file(ruta_local, vector_store)
    
-   query_engine = index.as_query_engine(
-       node_postprocessors=[sentence_optimizer]
-   )
+   query_engine = index.as_query_engine()
    
-   query= 'what experience Daniel has in angular?'
+   query= 'how many years of experiences has daniel in angular?'
    
    response = query_engine.query(query)
    
