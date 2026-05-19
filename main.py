@@ -10,7 +10,7 @@ from llama_index.llms.openai import OpenAI
 from llama_index.vector_stores.pinecone import PineconeVectorStore
 from pinecone import Pinecone
 from llama_index.core.callbacks import CallbackManager, LlamaDebugHandler
-import streamlit as st
+
 from llama_index.core.memory import ChatMemoryBuffer
 from llama_index.llms.groq import Groq
 from llama_index.core.chat_engine.types import ChatMode
@@ -34,8 +34,8 @@ llm = Groq(
 )
 
 Settings.llm = llm
-Settings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-small-en-v1.5")
-Settings.chunk.size = 512
+Settings.embed_model = HuggingFaceEmbedding(model_name="mixedbread-ai/mxbai-embed-large-v1")
+Settings.chunk_size = 512
 Settings.chunk_overlap = 50
 
 
@@ -52,17 +52,20 @@ def get_index():
     return index
 
 
-def process_and_upload_file(uploaded_file, vector_store):
+def process_and_upload_file(file_path, vector_store):
     """Procesa el archivo subido por el usuario y lo indexa a Pinecone"""
-    with tempfile.NamedTemporaryFile(delete=False, suffix=f".{uploaded_file.name.split('.')[-1]}") as tmp_file:
-        tmp_file.write(uploaded_file.getvalue())
-        tmp_path = tmp_file.name
-        
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"No se encontró ningún archivo en la ruta: {file_path}")
     try:
+        
         documents = SimpleDirectoryReader(
-            input_files=[tmp_path]
+            input_files=[file_path]
         ).load_data()
         
+        file_name = os.path.basename(file_path)
+        for doc in documents:
+            doc.metadata["file_name"] = file_name
+            
         pipeline = IngestionPipeline(
             transformations = get_transformation(),
             vector_store = vector_store,
@@ -73,8 +76,9 @@ def process_and_upload_file(uploaded_file, vector_store):
         
         print(f'\n Pipeline completed')
         print(f'    Nodes returned: {len(processed_node)}')
-    finally:
-        os.remove(tmp_path)
+    except Exception as e:
+        print(f"Error durante el procesamiento del archivo: {e}")
+        raise e
         
 
 def get_transformation():
@@ -98,6 +102,25 @@ def main():
        context_before=1,
        context_after=1,
    )
+   
+   index = get_index()
+   
+   vector_store = index.vector_store
+   
+   ruta_local = "C:/Users/Daniel/Documents/Documentos personales/Daniel Espitia resume.pdf"
+   
+   process_and_upload_file(ruta_local, vector_store)
+   
+   query_engine = index.as_query_engine(
+       node_postprocessors=[sentence_optimizer]
+   )
+   
+   query= 'what experience Daniel has in angular?'
+   
+   response = query_engine.query(query)
+   
+   print(f'Response: {response}')
+   
 
 if __name__ == '__main__':
     main()
