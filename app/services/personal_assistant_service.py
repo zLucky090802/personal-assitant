@@ -25,6 +25,9 @@ from llama_index.core.schema import NodeWithScore, QueryBundle
 from llama_index.core.node_parser import SentenceSplitter
 from llama_index.core.ingestion import IngestionPipeline
 
+from fastapi import UploadFile
+import shutil
+
 
 
 #configuration
@@ -57,33 +60,46 @@ def get_index():
     return index
 
 
-def process_and_upload_file(file_path, vector_store):
-    """Procesa el archivo subido por el usuario y lo indexa a Pinecone"""
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"No se encontró ningún archivo en la ruta: {file_path}")
+def process_and_upload_file(file: UploadFile):
+    """
+    Recibe cualquier archivo desde la API, lo guarda temporalmente,
+    lo procesa con LlamaIndex (soporta múltiples formatos) y limpia el disco.
+    """
+    uplaod_dir = '../../data'
+    os.makedirs(uplaod_dir, exist_ok=True)
+    
+    file_path = os.path.join(uplaod_dir, file.filename)
+    
     try:
+        #guardar el archivo fisicamente de forma temporal
         
-        documents = SimpleDirectoryReader(
-            input_files=[file_path]
-        ).load_data()
-        
-        file_name = os.path.basename(file_path)
-        for doc in documents:
-            doc.metadata["file_name"] = file_name
+        with open(file_path, 'wb') as buffer:
+            shutil.copyfileobj(file.file, buffer)
             
-        pipeline = IngestionPipeline(
-            transformations = get_transformation(),
-            vector_store = vector_store,
+        #cargar datos 
+        documents = SimpleDirectoryReader(input_files=[file_path]).load_data()
         
+        for doc in documents:
+            doc.metadata['file_name'] = file.filename
+            
+        #run pipeline ingestion to pinecone
+        
+        index = get_index()
+        pipeline = IngestionPipeline(
+            transformations=get_transformation(),
+            vector_store=index.vector_store,
         )
         
-        processed_node = pipeline.run(documents=documents, show_progress=True, num_workers=1)
-        
-        print(f'\n Pipeline completed')
-        print(f'    Nodes returned: {len(processed_node)}')
+        processed_nodes = pipeline.run(documents=documents, show_progress=True, num_workers=1)
+        return len(processed_nodes)
+    
     except Exception as e:
-        print(f"Error durante el procesamiento del archivo: {e}")
+        print(f'Error en el servicio al procesar archivo: {e}')
         raise e
+    finally:
+        #limpieza absoluto del servidor local
+        if os.path.exists(file_path):
+            os.remove(file_path)
         
 
 def get_transformation():
@@ -98,17 +114,7 @@ def get_transformation():
 def query(query:str):
     
    index = get_index()
-   
-   vector_store = index.vector_store
-   
-   ruta_local = "C:/Users/Daniel/Documents/Documentos personales/Daniel Espitia resume.pdf"
-   
-   process_and_upload_file(ruta_local, vector_store)
-   
    query_engine = index.as_query_engine()
-   
- 
-   
    response = query_engine.query(query)
    
    return {
