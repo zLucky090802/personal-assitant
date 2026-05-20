@@ -1,7 +1,7 @@
 from fastapi import APIRouter
-from ..services.personal_assistant_service import query
+from ..services.personal_assistant_service import query, process_and_upload_file
 from pydantic import BaseModel
-
+from fastapi import APIRouter, UploadFile, File, HTTPException
 
 router = APIRouter()
 
@@ -18,3 +18,17 @@ async def handled_query(payload: QueryModel):
         'status':'success',
         'response':result
     }
+    
+@router.post('/upload')
+async def upload_file(file:UploadFile = File(...)):
+    """Endpoint genérico para subir e indexar cualquier archivo en tiempo real"""
+    try:
+        total_nodes = process_and_upload_file(file)
+        return{
+            "status": "success",
+            "message": f"El archivo '{file.filename}' fue procesado e indexado con éxito.",
+            "chunks_processed": total_nodes
+        }
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'Fallo en la carga: {str(e)}')
