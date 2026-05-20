@@ -9,6 +9,15 @@ class QueryModel(BaseModel):
     text: str
 
 
+# Definimos la estructura de un mensaje individual
+class ChatMessageModel(BaseModel):
+    role: str     # 'user' o 'assistant'
+    content: str
+
+# El payload ahora recibe la lista completa
+class ChatPayload(BaseModel):
+    messages: list[ChatMessageModel]
+
 
 @router.post('/ask')
 async def handled_query(payload: QueryModel):

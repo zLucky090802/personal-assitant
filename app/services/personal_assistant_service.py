@@ -119,7 +119,8 @@ def query(query:str):
    
    return {
        'status':'success',
-       'response': response.response
+       'response': response.response,
+       'rol': 'assistant'
    }
 
 
