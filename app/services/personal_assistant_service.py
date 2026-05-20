@@ -24,6 +24,7 @@ from llama_index.core.postprocessor.types import BaseNodePostprocessor
 from llama_index.core.schema import NodeWithScore, QueryBundle
 from llama_index.core.node_parser import SentenceSplitter
 from llama_index.core.ingestion import IngestionPipeline
+from llama_index.core.llms import ChatMessage
 
 from fastapi import UploadFile
 import shutil
@@ -46,6 +47,8 @@ Settings.embed_model = HuggingFaceEmbedding(
 Settings.chunk_size = 512
 Settings.chunk_overlap = 50
 
+
+SESSION_ENGINES = {}
 
 def get_index():
      #conecto to pinecone vector stroe and retunr index
@@ -124,3 +127,62 @@ def query(query:str):
    }
 
 
+def chat_with_history(session_id: str, query_text: str):
+    
+    # index = get_index()
+    
+    # #we turn of the messages to llamaindex objects
+    
+    # past_messages = [
+    #     ChatMessage(role=msg.role, content=msg.content)
+    #     for msg in chat_history[:-1]
+    # ]
+    
+    
+    
+    # #extract the lastest messages from the user
+    
+    # lastest_user_query = chat_history[-1].content 
+    
+    # #create the temp memory from the history
+    
+    # memory = ChatMemoryBuffer.from_defaults(chat_history=past_messages, token_limit=3900)
+    
+    # #we lift up the chat with a fresh memory
+    
+    # chat_engine = index.as_chat_engine(
+    #     chat_mode=ChatMode.CONTEXT,
+    #     memory=memory,
+    #      system_prompt = (
+    #             "You are a helpful assistant that answers questions about the documents the user index you. "
+    #             "Use the retrieved context to provide accurate, helpful answers. "
+    #             "If you don't know the answer, say so."
+    #         ),
+    # )
+    
+    
+    global SESSION_ENGINES
+    
+    if session_id not in SESSION_ENGINES:
+        index = get_index()
+        memory = ChatMemoryBuffer.from_defaults(token_limit=3900)
+        SESSION_ENGINES[session_id] = index.as_chat_engine(
+            chat_mode=ChatMode.CONTEXT,
+            memory= memory,
+             system_prompt = (
+                "You are a helpful assistant that answers questions about the documents the user index you. "
+                "Use the retrieved context to provide accurate, helpful answers. "
+                "If you don't know the answer, say so."
+            ),
+        )
+        
+    chat_engine = SESSION_ENGINES[session_id]
+    
+    
+    response = chat_engine.chat(query_text)
+    
+    return {
+        'status':'success',
+        'response':response.response,
+        'rol': 'assistant'
+    }

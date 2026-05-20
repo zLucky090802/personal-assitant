@@ -14,10 +14,10 @@ class ChatMessageModel(BaseModel):
     role: str     # 'user' o 'assistant'
     content: str
 
-# El payload ahora recibe la lista completa
-class ChatPayload(BaseModel):
-    messages: list[ChatMessageModel]
 
+class ChatPayload(BaseModel):
+    session_id: str  # Un ID único por usuario (ej: "user_12345")
+    text: str        # La pregunta actual
 
 @router.post('/ask')
 async def handled_query(payload: QueryModel):
