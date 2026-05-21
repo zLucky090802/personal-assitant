@@ -2,6 +2,8 @@
 
 
 import os
+import hashlib
+
 from dotenv import load_dotenv
 
 import tempfile
@@ -63,10 +65,11 @@ def get_index():
     return index
 
 
+
 def process_and_upload_file(file: UploadFile):
     """
-    Recibe cualquier archivo desde la API, lo guarda temporalmente,
-    lo procesa con LlamaIndex (soporta múltiples formatos) y limpia el disco.
+    Recibe cualquier archivo desde la API, comprueba su hash para evitar duplicidad,
+    lo guarda temporalmente, lo procesa con LlamaIndex y limpia el disco.
     """
     uplaod_dir = '../../data'
     os.makedirs(uplaod_dir, exist_ok=True)
@@ -74,19 +77,43 @@ def process_and_upload_file(file: UploadFile):
     file_path = os.path.join(uplaod_dir, file.filename)
     
     try:
-        #guardar el archivo fisicamente de forma temporal
+        # 1. Leer bytes en memoria para calcular el hash único del contenido
+        file_bytes = file.file.read()
+        file_hash = calculate_file_hash(file_bytes)
         
+        # IMPORTANTE: Devolvemos el puntero al inicio para que shutil pueda volver a leerlo
+        file.file.seek(0) 
+
+        # 2. Conectar a Pinecone y verificar si este contenido exacto ya existe
+        pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
+        pinecone_index = pc.Index(INDEX_NAME)
+        
+        # Buscamos en el índice usando el filtro por metadatos 'file_hash'
+        query_response = pinecone_index.query(
+            filter={"file_hash": {"$eq": file_hash}},
+            top_k=1,
+            include_metadata=True,
+            vector=[0.1] * 1024 # Cambiar por un vector dummy con valores pero con top_k amplio si es necesario
+        )
+        
+        # Si encuentra coincidencias, saltamos el proceso e informamos que no hay nodos nuevos
+        if query_response and len(query_response.get('matches', [])) > 0:
+            print(f"El contenido de '{file.filename}' ya está indexado. Evitando duplicados.")
+            return 0
+            
+        # 3. Guardar el archivo físicamente de forma temporal (si el hash es nuevo)
         with open(file_path, 'wb') as buffer:
             shutil.copyfileobj(file.file, buffer)
             
-        #cargar datos 
+        # Cargar datos
         documents = SimpleDirectoryReader(input_files=[file_path]).load_data()
         
+        # Inyectamos el nombre y el Hash en los metadatos de cada documento
         for doc in documents:
             doc.metadata['file_name'] = file.filename
+            doc.metadata['file_hash'] = file_hash
             
-        #run pipeline ingestion to pinecone
-        
+        # Run pipeline ingestion to pinecone
         index = get_index()
         pipeline = IngestionPipeline(
             transformations=get_transformation(),
@@ -100,10 +127,9 @@ def process_and_upload_file(file: UploadFile):
         print(f'Error en el servicio al procesar archivo: {e}')
         raise e
     finally:
-        #limpieza absoluto del servidor local
+        # Limpieza absoluta del servidor local
         if os.path.exists(file_path):
             os.remove(file_path)
-        
 
 def get_transformation():
     return [
@@ -186,3 +212,12 @@ def chat_with_history(session_id: str, query_text: str):
         'response':response.response,
         'rol': 'assistant'
     }
+    
+    
+
+def calculate_file_hash(file_bytes) -> str:
+    """Genera un identificador único (SHA-256) basado en el contenido del archivo"""
+    sha256_hash = hashlib.sha256()
+    # Leemos los bytes del archivo para calcular su huella única
+    sha256_hash.update(file_bytes)
+    return sha256_hash.hexdigest()
