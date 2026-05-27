@@ -26,7 +26,7 @@ async def handled_query(payload: ChatPayload):
         session_id = payload.session_id
         query_user = payload.text
         
-        result = chat_with_history(session_id=session_id, query_text=query_user)
+        result = await chat_with_history(session_id=session_id, query_text=query_user)
         
         return result
     

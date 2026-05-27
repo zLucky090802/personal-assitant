@@ -1,9 +1,10 @@
 fastapi
 uvicorn
 python-dotenv
-llama-index
+pydantic
+pinecone-client
+llama-index-core
 llama-index-llms-groq
 llama-index-vector-stores-pinecone
-pinecone
-llama-index-embeddings-huggingface
-sentence-transformers
+llama-index-embeddings-huggingface-api
+nest_asyncio

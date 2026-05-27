@@ -27,6 +27,7 @@ from llama_index.core.schema import NodeWithScore, QueryBundle
 from llama_index.core.node_parser import SentenceSplitter
 from llama_index.core.ingestion import IngestionPipeline
 from llama_index.core.llms import ChatMessage
+from llama_index.embeddings.huggingface import HuggingFaceInferenceAPIEmbedding
 
 from fastapi import UploadFile
 import shutil
@@ -34,7 +35,7 @@ import shutil
 
 
 #configuration
-
+hf_token = os.getenv("HF_TOKEN")
 INDEX_NAME = 'personal-assitant'
 api_key = os.getenv('GROQ_API_KEY')
 llm = Groq(
@@ -44,8 +45,9 @@ llm = Groq(
 )
 
 Settings.llm = llm
-Settings.embed_model = HuggingFaceEmbedding(
-    model_name="mixedbread-ai/mxbai-embed-large-v1"
+Settings.embed_model = HuggingFaceInferenceAPIEmbedding(
+    model_name="BAAI/bge-large-en-v1.5", # El modelo que prefieras usar
+    token=hf_token
 )
 Settings.chunk_size = 512
 Settings.chunk_overlap = 50
@@ -218,7 +220,7 @@ def query(query:str):
    }
 
 
-def chat_with_history(session_id: str, query_text: str):
+async def chat_with_history(session_id: str, query_text: str):
     
     # index = get_index()
     

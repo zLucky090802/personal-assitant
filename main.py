@@ -1,3 +1,4 @@
+import nest_asyncio
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,7 +8,7 @@ from dotenv import load_dotenv
 from app.api.routes import router as api_router
 
 load_dotenv()
-
+nest_asyncio.apply()
 app = FastAPI(title='personal-assistant')
 
 # 1. Obtenemos la URL de producción desde las variables de entorno.
