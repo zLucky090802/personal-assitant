@@ -8,3 +8,4 @@ llama-index-llms-groq
 llama-index-vector-stores-pinecone
 requests
 fastembed
+python-multipart
