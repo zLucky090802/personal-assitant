@@ -5,7 +5,7 @@ import os
 import hashlib
 
 from dotenv import load_dotenv
-
+import asyncio
 import tempfile
 
 from llama_index.core import VectorStoreIndex, Settings
@@ -15,7 +15,7 @@ from llama_index.llms.openai import OpenAI
 from llama_index.vector_stores.pinecone import PineconeVectorStore
 from pinecone import Pinecone
 from llama_index.core.callbacks import CallbackManager, LlamaDebugHandler
-
+import requests
 from llama_index.core.memory import ChatMemoryBuffer
 from llama_index.llms.groq import Groq
 from llama_index.core.chat_engine.types import ChatMode
@@ -28,11 +28,36 @@ from llama_index.core.node_parser import SentenceSplitter
 from llama_index.core.ingestion import IngestionPipeline
 from llama_index.core.llms import ChatMessage
 from llama_index.embeddings.huggingface import HuggingFaceInferenceAPIEmbedding
-
+from llama_index.core.embeddings import BaseEmbedding
 from fastapi import UploadFile
 import shutil
 
+class CustomFastEmbedEmbedding(BaseEmbedding):
+    def __init__(self, model_name: str = "BAAI/bge-small-en-v1.5", **kwargs):
+        super().__init__(model_name=model_name, **kwargs)
+        from fastembed import TextEmbedding
+        # Inicializa el modelo local ONNX ultra-ligero
+        self._model = TextEmbedding(model_name=model_name)
 
+    def _get_text_embedding(self, text: str) -> list:
+        return self._get_text_embeddings([text])[0]
+
+    def _get_text_embeddings(self, texts: list) -> list:
+        embeddings = list(self._model.embed(texts))
+        return [embedding.tolist() for embedding in embeddings]
+
+    def _get_query_embedding(self, query: str) -> list:
+        query_embeddings = list(self._model.query_embed(query))
+        return query_embeddings[0].tolist()
+
+    async def _aget_text_embedding(self, text: str) -> list:
+        return await asyncio.to_thread(self._get_text_embedding, text)
+
+    async def _aget_text_embeddings(self, texts: list) -> list:
+        return await asyncio.to_thread(self._get_text_embeddings, texts)
+
+    async def _aget_query_embedding(self, query: str) -> list:
+        return await asyncio.to_thread(self._get_query_embedding, query)
 
 #configuration
 hf_token = os.getenv("HF_TOKEN")
@@ -45,10 +70,8 @@ llm = Groq(
 )
 
 Settings.llm = llm
-Settings.embed_model = HuggingFaceInferenceAPIEmbedding(
-    model_name="BAAI/bge-large-en-v1.5", # El modelo que prefieras usar
-    token=hf_token
-)
+# Cambiamos a la versión LARGE que genera 1024 dimensiones exactas
+Settings.embed_model = CustomFastEmbedEmbedding(model_name="BAAI/bge-small-en-v1.5")
 Settings.chunk_size = 512
 Settings.chunk_overlap = 50
 
@@ -122,7 +145,7 @@ def process_and_upload_file(file: UploadFile):
 
             include_metadata=True,
 
-            vector=[0.1] * 1024 # Cambiar por un vector dummy con valores pero con top_k amplio si es necesario
+            vector=[0.1] * 384  # Cambiar por un vector dummy con valores pero con top_k amplio si es necesario
 
         )
 
