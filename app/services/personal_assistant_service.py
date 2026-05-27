@@ -14,20 +14,16 @@ from llama_index.core import SimpleDirectoryReader
 from llama_index.llms.openai import OpenAI
 from llama_index.vector_stores.pinecone import PineconeVectorStore
 from pinecone import Pinecone
-from llama_index.core.callbacks import CallbackManager, LlamaDebugHandler
-import requests
+
 from llama_index.core.memory import ChatMemoryBuffer
 from llama_index.llms.groq import Groq
 from llama_index.core.chat_engine.types import ChatMode
-from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+
 # from llama_index.embeddings.huggingface import SentenceTransformerEmbedding
-from llama_index.core.postprocessor import SentenceEmbeddingOptimizer
-from llama_index.core.postprocessor.types import BaseNodePostprocessor
-from llama_index.core.schema import NodeWithScore, QueryBundle
+
 from llama_index.core.node_parser import SentenceSplitter
 from llama_index.core.ingestion import IngestionPipeline
-from llama_index.core.llms import ChatMessage
-from llama_index.embeddings.huggingface import HuggingFaceInferenceAPIEmbedding
+
 from llama_index.core.embeddings import BaseEmbedding
 from fastapi import UploadFile
 import shutil
