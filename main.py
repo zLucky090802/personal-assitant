@@ -17,17 +17,16 @@ FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
 # 2. Configuramos los orígenes permitidos de forma explícita
 origins = [
-    FRONTEND_URL,
-    "http://localhost:5173",  # Asegura compatibilidad con tu entorno de desarrollo local
-    "http://localhost:3000"   # Por si usas otro puerto común localmente
+    "https://index-me.netlify.app",
+    "http://localhost:4200", # Por si necesitas probar localmente
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,       # <-- Ya no es '*', ahora está restringido
-    allow_credentials=True,      # Permite el flujo de cookies o headers de autenticación si los necesitas
-    allow_methods=['*'],
-    allow_headers=['*']
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"], # Permite POST, GET, OPTIONS, etc.
+    allow_headers=["*"], # Permite Content-Type, Authorization, etc.
 )
 
 # Acoplamos tus rutas de LlamaIndex
