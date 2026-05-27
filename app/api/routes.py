@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from ..services.personal_assistant_service import query, process_and_upload_file
+from ..services.personal_assistant_service import chat_with_history, process_and_upload_file
 from pydantic import BaseModel
 from fastapi import APIRouter, UploadFile, File, HTTPException
 
@@ -20,13 +20,19 @@ class ChatPayload(BaseModel):
     text: str        # La pregunta actual
 
 @router.post('/ask')
-async def handled_query(payload: QueryModel):
-    query_user = payload.text
-    result = query(query_user)
-    return {
-        'status':'success',
-        'response':result
-    }
+async def handled_query(payload: ChatPayload):
+    
+    try:
+        session_id = payload.session_id
+        query_user = payload.text
+        
+        result = chat_with_history(session_id=session_id, query_text=query_user)
+        
+        return result
+    
+    except Exception as e:
+        print(f'Error en el enpoint /ask: {e}')
+        raise HTTPException(status_code=500, detail=f'Error interno en el chat: {str(e)}')
     
 @router.post('/upload')
 async def upload_file(file: UploadFile = File(...)): # <-- 1. Aquí se recibe de Postman
