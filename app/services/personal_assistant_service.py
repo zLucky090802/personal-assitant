@@ -20,7 +20,7 @@ from llama_index.llms.groq import Groq
 from llama_index.core.chat_engine.types import ChatMode
 
 # from llama_index.embeddings.huggingface import SentenceTransformerEmbedding
-
+import gc
 from llama_index.core.node_parser import SentenceSplitter
 from llama_index.core.ingestion import IngestionPipeline
 
@@ -197,6 +197,7 @@ def process_and_upload_file(file: UploadFile):
 
         processed_nodes = pipeline.run(documents=documents, show_progress=True, num_workers=1)
         index.insert_nodes(processed_nodes)
+        gc.collect()
         return len(processed_nodes)
 
    
