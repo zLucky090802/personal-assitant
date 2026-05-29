@@ -1,23 +1,10 @@
 from fastapi import APIRouter
 from ..services.personal_assistant_service import chat_with_history, process_and_upload_file
 from pydantic import BaseModel
+from ..schemas.assistant_schema import ChatPayload
 from fastapi import APIRouter, UploadFile, File, HTTPException
 
 router = APIRouter()
-
-class QueryModel(BaseModel):
-    text: str
-
-
-# Definimos la estructura de un mensaje individual
-class ChatMessageModel(BaseModel):
-    role: str     # 'user' o 'assistant'
-    content: str
-
-
-class ChatPayload(BaseModel):
-    session_id: str  # Un ID único por usuario (ej: "user_12345")
-    text: str        # La pregunta actual
 
 @router.post('/ask')
 async def handled_query(payload: ChatPayload):
