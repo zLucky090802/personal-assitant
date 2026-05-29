@@ -1,10 +1,4 @@
----
 
-## ⚡ 2. README para la carpeta del Backend (`FastAPI + LlamaIndex`)
-
-Crea un archivo llamado `README.md` en la raíz de tu proyecto de Python:
-
-```markdown
 # 🧠 IndexMe - RAG Architecture AI Agent (Backend)
 
 Este es el núcleo de procesamiento e inteligencia de **IndexMe**. Una API REST robusta construida con **FastAPI** y **LlamaIndex** que implementa una arquitectura **RAG (Retrieval-Augmented Generation)**. Cuenta con un pipeline de ingesta optimizado para evitar duplicidad de archivos mediante hashes únicos e indexación en bases de datos vectoriales.
