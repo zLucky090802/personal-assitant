@@ -22,9 +22,9 @@ async def handled_query(payload: ChatPayload):
         raise HTTPException(status_code=500, detail=f'Error interno en el chat: {str(e)}')
     
 @router.post('/upload')
-async def upload_file(file: UploadFile = File(...)): # <-- 1. Aquí se recibe de Postman
+async def upload_file(file: UploadFile = File(...)): 
     try:
-        # 2. OJO AQUÍ: Debes pasarle el objeto 'file' completo al servicio
+        # Debes pasarle el objeto 'file' completo al servicio
         total_nodes = process_and_upload_file(file) 
         
         if total_nodes == 0:
@@ -41,5 +41,5 @@ async def upload_file(file: UploadFile = File(...)): # <-- 1. Aquí se recibe de
         }
     except Exception as e:
         print(f'Error en el servicio al procesar archivo: {e}')
-        # Si algo falla en el servicio, este string captura el error y lo muestra en Postman
+   
         raise HTTPException(status_code=500, detail=f"Fallo en la carga: {str(e)}")
